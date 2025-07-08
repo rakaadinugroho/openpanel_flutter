@@ -85,12 +85,29 @@ class OpenpanelHttpClient {
   }
 
   Future<String?> event({required PostEventPayload payload}) async {
+    if (verbose) {
+      _logger.i('OPENPANEL > Sending HTTP request to /event: ${payload.toJson()}');
+    }
+    
     final response = await runApiCall(() async {
-      final response = await _dio.post('/event', data: payload.toJson());
-      return response.data as String;
+      try {
+        final response = await _dio.post('/event', data: payload.toJson());
+        if (verbose) {
+          _logger.i('OPENPANEL > Received response: ${response.data}');
+        }
+        return response.data as String;
+      } catch (e, stackTrace) {
+        if (verbose) {
+          _logger.e('OPENPANEL > Error sending event', error: e, stackTrace: stackTrace);
+        }
+        rethrow;
+      }
     });
 
     if (response.error != null) {
+      if (verbose) {
+        _logger.e('OPENPANEL > Error in event API call', error: response.error);
+      }
       return null;
     }
 

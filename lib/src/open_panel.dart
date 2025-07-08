@@ -84,6 +84,9 @@ class Openpanel {
       if (options.tracingSampleRate < 1.0) {
         double draw = Random().nextDouble();
         sampled = draw < options.tracingSampleRate;
+        if (options.verbose) {
+          _logger.i('OPENPENAL > Tracing sampling - Rate: ${options.tracingSampleRate}, Draw: $draw, Sampled: $sampled');
+        }
       }
 
       if (deviceData.isNotEmpty) {
@@ -191,8 +194,19 @@ class Openpanel {
   }) {
     _execute(() async {
       final profileId = properties['profileId'] ?? _state.profileId;
+      
+      if (profileId == null) {
+        if (options.verbose) {
+          _logger.e('OPENPANEL > Event "$name" not sent - profileId is null');
+        }
+        return;
+      }
 
-      _httpClient.event(
+      if (options.verbose) {
+        _logger.i('OPENPANEL > Sending event: $name');
+      }
+
+      final result = await _httpClient.event(
         payload: PostEventPayload(
           name: name,
           timestamp: DateTime.timestamp().toIso8601String(),
@@ -204,6 +218,14 @@ class Openpanel {
           profileId: profileId,
         ),
       );
+
+      if (options.verbose) {
+        if (result == null) {
+          _logger.e('OPENPANEL > Failed to send event: $name');
+        } else {
+          _logger.i('OPENPANEL > Event sent successfully: $name');
+        }
+      }
     });
   }
 
@@ -233,7 +255,12 @@ class Openpanel {
       return;
     }
 
-    if (!_state.isTracingSampled) return;
+    if (!_state.isTracingSampled) {
+      if (options.verbose) {
+        _logger.i('OPENPANEL > Action skipped - Tracing not sampled for this session');
+      }
+      return;
+    }
 
     action();
 
